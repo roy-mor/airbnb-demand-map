@@ -1,0 +1,8 @@
+{
+  "name": "airbnb-demand-map",
+  "description": "Queries and shows a map of most in demand areas on Airbnb for selected city",
+  "repository": "https://github.com/roy-mor/airbnb-demand-map",
+  "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Airbnb_Logo_B%C3%A9lo.svg/2000px-Airbnb_Logo_B%C3%A9lo.svg.png",
+  "keywords": ["airbnb", "demand-map", "node", "es6", "express"],
+  "image": "heroku/nodejs"
+}
