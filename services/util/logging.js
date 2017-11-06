@@ -4,7 +4,7 @@ import util from 'util';
 
 const logger = winston.createLogger({
   level: 'info',
-  format: winston.format.json(),
+  format: winston.format.simple(),
  /*  format: winston.format.combine(
     winston.format.splat(),
     winston.format.simple()
@@ -29,28 +29,18 @@ if (process.env.NODE_ENV !== 'production') {
   }));
 }
 
-function log(data, obj) {
-	if (typeof obj === 'string' || obj instanceof String) {
-		return logger.info(`${data} ${obj}`);
-	} else {
-		return logger.info(data, obj); //TODO MAKE FACTORY WITH CLOSURES
+function logFactory(level) {
+	return function(msg, obj) {
+		if (typeof obj === 'string' || obj instanceof String) {
+			return logger.log({level: level, message: `${msg} ${obj}`});
+		} else {
+			return logger.log({level: level, message: msg, obj: obj}); // TODO improve, make sure still a factory
+		}
 	}
 }
 
-function err(data, obj) {
-	if (typeof obj === 'string' || obj instanceof String) {
-		return logger.error(`${data} ${obj}`);
-	} else {
-		return logger.error(data, obj); //TODO MAKE FACTORY WITH CLOSURES
-	}
-}
+let log = logFactory('info');
+let error = logFactory('error');
+let warn = logFactory('warn');
 
-function warn(data, obj) {
-if (typeof obj === 'string' || obj instanceof String) {
-		return logger.warn(`${data} ${obj}`);
-	} else {
-		return logger.warn(data, obj); //TODO MAKE FACTORY WITH CLOSURES
-	}
-}
-
-module.exports = {logger, log, err, warn};
+module.exports = {logger, log, error, warn};
