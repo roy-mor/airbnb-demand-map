@@ -2,16 +2,68 @@ import 'babel-polyfill';
 import _ from 'lodash';
 import Promise from 'bluebird';
 import request from 'request';
+import dateFormat from 'dateformat';
 import { RateLimiter } from 'limiter';
-import { logger, err, log, warn } from './util/logging';
+import { log, warn, error } from './util/logging';
 import consts from './util/constants';
 import db from './util/db';
 import RawListing from '../models/RawListing';
+import Calendar from '../models/Calendar';
 
+//there is a corellation between listings which are "always reserved" ("yearly occupied" score of 365/366)
+//and such that have null star_ratings and 0 reviews. So we can weed them out by ignoring the null star
+//ratings ones (check to see if they have reasonable occupancy)
+
+//TODO CHECK AIRBNB JS STYLE GUIDE (AND OTHER STYLE GUIDES)
 const limiter = new RateLimiter(50, 'minute');
 
 //let listingsArray = [];
 
+async function getCalendars(listingsArray, opts) {
+	let calendarsArray = [];
+	for (let listing of listingsArray) {
+			opts.listingId = listing['listing']['id'];
+			let url = buildCalendarUrl(opts);
+			log(`getting calendar for listing_id ${opts.listingId}\n`, url);
+			console.log();
+			let response = await airbnbRequest(url);
+			response['listing_id'] = listing['listing']['id']; // augment the calendar object with the listingId
+			 let occupancyScore = _.sumBy(response.calendar_days, o => { //consider reduce() instead
+                if (o.available)
+                 {
+                    return 0; //TODO CHECK LOGIC
+                }
+                else {return 1;}
+            });
+			response['occupancyScore'] = occupancyScore;
+			calendarsArray.push(response);
+		};
+	log(`total calendar data set size: ${calendarsArray.length}`);
+	return calendarsArray;	
+}
+
+async function getCalendarsAsync(listingsArray, opts) {
+	let calendarsArray = await Promise.all(listingsArray.map(async listing => {
+			opts.listingId = listing['listing']['id'];
+			let url = buildCalendarUrl(opts);
+			log(`getting calendar for listing_id ${opts.listingId}\n`, url);
+			console.log();
+			let response = await airbnbRequest(url);
+			response['listing_id'] = listing['listing']['id']; // augment the calendar object with the listingId
+			 let occupancyScore = _.sumBy(response.calendar_days, o => { //consider reduce() instead
+                if (o.available)
+                 {
+                    return 0; //TODO CHECK LOGIC
+                }
+                else {return 1;}
+            });
+			response['occupancyScore'] = occupancyScore;
+			return response;
+	}));
+	log(`total calendar data set size: ${calendarsArray.length}`);
+	//console.dir(calendarsArray);
+	return calendarsArray;	
+}
 
 async function getListings(opts, limit, listingsArray) {
     limit = limit || Number.MAX_SAFE_INTEGER;
@@ -36,10 +88,10 @@ async function getListings(opts, limit, listingsArray) {
                 //else continue?
             }
         } else { // something is wrong - unexpected response
-            err('Missing or unexpected response from airbnb: ', response);
+            error('Missing or unexpected response from airbnb: ', response);
         }
 
-    opts.priceMin += consts.DEFAULT_PRICE_ADD;
+    opts.priceMin = opts.priceMax + 1;
     opts.priceMax += consts.DEFAULT_PRICE_ADD;
     console.log('\n');
     log('');
@@ -60,7 +112,7 @@ async function doPaginate(url, opts, resultsSize, listingsArray) {
             lastPagination: response['metadata']['pagination']
         };
     } else {
-        err('Encountered error while paginating: ', response);
+        error('Encountered error while paginating: ', response);
     }
 
 }
@@ -83,7 +135,7 @@ async function airbnbRequest(url, errors) {
                         }
                         return resolve(airbnbRequest(url, errCount + 1));
                     } else {
-                        err('airbnbRequest: maximum retries threshold reached without successful response. url:' + url)
+                        error('airbnbRequest: maximum retries threshold reached without successful response. url:' + url)
                         return reject(err);
                     }
                 }
@@ -119,32 +171,68 @@ function buildSearchUrl(opts, urlStr) { //instead checkout SERIALIZE()
     return url;
 }
 
-async function populateListings() {
-	let opts = { 
+async function populateCalendars(listingsArr) {
+	 let now = new Date();
+	 //TODO CHECK THIS LOGIC...
+	 let threeMonthsAgo = now.setMonth(now.getMonth() - 3); // Airbnb allows accessing a listing's calender only up to 3 months ago 
+	 let threeMonthsAgoDateObj = new Date(threeMonthsAgo);
+	 let threeMonthsAgoFormatted = dateFormat(threeMonthsAgo, "yyyy-m-d");	
+	 let threeMonthsAgoPlusYear = threeMonthsAgoDateObj.setFullYear(threeMonthsAgoDateObj.getFullYear() + 1);
+	 let threeMonthsAgoPlusYearFormatted = dateFormat(threeMonthsAgoPlusYear, "yyyy-m-d");	
+
+	 let opts = { 
         clientId: consts.CLIENT_ID,
-        location: consts.DEFAULT_LOCATION,
+        startDate: threeMonthsAgoFormatted,  
+        endDate: threeMonthsAgoPlusYearFormatted
+    }
+    console.dir(opts);
+	listingsArr = listingsArr || await RawListing.find().limit(30).lean();     
+	let calendarArr = await getCalendars(listingsArr, opts);
+    log('now saving calendar to database... size = ' + calendarArr.length); //try catch
+    await Calendar.collection.insert(calendarArr);
+    //console.dir(listingsArr);
+}
+
+async function populateListings(location, isToJSONOnly) { //TODO implement array to JSON
+    let initialOpts = {
+        clientId: consts.CLIENT_ID,
+        location: location || consts.DEFAULT_LOCATION,
         offset: 0,
         limit: consts.DEFAULT_LIMIT,
         priceMin: 0,
         priceMax: 5
     }
     let listings = [];
-    await getListings(opts, 200, listings);
+    await getListings(initialOpts, 1000, listings);
     console.log('listings size:' + listings.length);
-    listings.forEach(async page => { 
-    	page['search_results'].forEach(async listing => { 
-    		await RawListing.create(listing);
-    });
-  });
+    log('Now saving ${initialOpts.location} listings to database...');
+    try {
+        listings.forEach(async page => {
+            page['search_results'].forEach(async listing => {
+                await new RawListing(listing).save();  
+                //let lst = new RawListing(listing);
+                //console.log(listing);
+                //await lst.save();
+            });
+        });
+        log('Done saving listings to database.');
+
+    } catch (err) {
+        error('encountered error while saving listings to database: ', err)
+    }
 }
 
 
-
+async function run() {
 try { 
- RawListing.create({});
+	
  log('------- New Run ' + new Date());
- populateListings();
+ //await populateListings();
+ return await populateCalendars();
 }
 catch (err) {
 	console.log(err);
 }
+}
+
+run();
