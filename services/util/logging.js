@@ -31,10 +31,10 @@ if (process.env.NODE_ENV !== 'production') {
 
 function logFactory(level) {
 	return function(msg, obj) {
-		if (typeof obj === 'string' || obj instanceof String) {
+		if (typeof obj === 'string' || obj instanceof String || typeof obj === 'number') {
 			return logger.log({level: level, message: `${msg} ${obj}`});
 		} else {
-			return logger.log({level: level, message: msg, obj: obj}); // TODO improve, make sure still a factory
+			return logger.log({level: level, message: msg, value: obj}); // TODO improve, make sure still a factory
 		}
 	}
 }

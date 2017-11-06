@@ -12,7 +12,13 @@ const configurationConstants = {
 	 DEFAULT_LOCATION: 'Jerusalem',
 	 DEFAULT_LIMIT: 50,
 	 MAXIMUM_MAX_PRICE: 10000,
-	 DEFAULT_PRICE_ADD: 5
+	 
+	 //to document: started with DEFAULT_PRICE_ADD: 5, but some busy cities had more than 1000 in that $5 range,
+	 //so change to 1, instead of implementing detection and fallback (more calls and a bit slower, but keeps it simple)
+	 //theoretically there could be a price tag with more than 1000 listings, but for our stats
+	 //1000 items is enought per price, so we can afford losing them.	
+	 DEFAULT_PRICE_ADD: 1 
+
 };
 
 
