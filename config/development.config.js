@@ -1,11 +1,12 @@
-
+const LOCALHOST = '127.0.0.1';
+//TODO add production.config.js
 module.exports = {
     port: process.env.PORT || process.env.NODE_PORT || 8081,
     ssl: false,
-    host: '127.0.0.1',
-    serverIp: '127.0.0.1',
+    host: LOCALHOST,
+    serverIp: LOCALHOST,
     mongodb: {
-        host: '127.0.0.1',
+        host: LOCALHOST,
         port: '27017',
         user: process.env.MONGODB_USER || '',
         pass: process.env.MONGODB_PASS || '',
