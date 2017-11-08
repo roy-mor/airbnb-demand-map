@@ -14,6 +14,6 @@ let RawListing = new mongoose.Schema({
             is_superhost: Boolean,
         }
     }
-}, {strict: false}); // no need to define specific fields
+}, {strict: false}); // no need to indicate all specific fields
 
 export default mongoose.model('RawListing', RawListing);
