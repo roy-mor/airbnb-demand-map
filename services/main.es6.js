@@ -7,6 +7,7 @@ import { RateLimiter } from 'limiter';
 import { log, warn, error } from './util/logging';
 import consts from './util/constants';
 import db from './util/db';
+import mongoose from 'mongoose';
 import RawListing from '../models/RawListing';
 import Calendar from '../models/Calendar';
 import { getFinalDemandScoreForListing } from './util/metricsCalculator';
@@ -15,54 +16,92 @@ import { getFinalDemandScoreForListing } from './util/metricsCalculator';
 //and such that have null star_ratings and 0 reviews. So we can weed them out by ignoring the null star
 //ratings ones (check to see if they have reasonable occupancy)
 
-//TODO CHECK AIRBNB JS STYLE GUIDE (AND OTHER STYLE GUIDES)
+//TODO CHECK AIRBNB JS STYLE GUIDE (AND OTHER STYLE GUIDES) let => consts
 //TODO CHECK duplicates in calendar
 //TODO use collection upsert instead of insert
 //TODO replace let's with consts!
 
 //https://stackoverflow.com/questions/25285232/bulk-upsert-in-mongodb-using-mongoose
 
-//Logic: user provides location 
-//getListings(location) is called
-//getCalendar() is called on all listings (prevent duplicates; create unique index -- failed inserts?)
-//collection DemandData.[location] (DemandData.London, DemandData.New_York) is created 
-//by deleting existing collection (if exists), finding() all listings in rawListings with listing.city=location,
-//then joining (aggregate framework?) on their calendar (via listing_id), calculating demand according to params
-//and saving in DemandData.[location] which will have only lat/long and demandmetricValue
+//usage: node getdemand <location> [--limit: limit] [--json]
 
-const limiter = new RateLimiter(50, 'minute');
 
-//let listingsArray = [];
+const limiter = new RateLimiter(60, 'minute');
 
 async function calculateDemand(location) {
-	//TODO implement as aggregate query
-	let filteredListings = await RawListing.find({'airbnb-demand-location': location, 
-			'listing.star_rating': {$ne: null}});
-	console.log(`filtered listings length: ${filteredListings.length}`);
-	for (let listing of filteredListings) {
-	//filteredListings.forEach(async listing => {
-		let listingCalendar = await Calendar.findOne({listing_id: listing['listing']['id']});
-		//console.log(listingCalendar.listing_id);
-		//console.log(listing.listing['reviews_count']);
-		//console.log(listing['reviews_count']);
+	log(`Calculating demand for location ${location}...`);
+	let listingData;
+	const pipeline = [
+		// location + listing quality filter
+		{ $match: { 'airbnb-demand-location': location,
+		//TODO CHANGE THIS MORE ACCURATELY!!
+		'listing.star_rating': {$ne: null}} //filter out listings with no reviews and no stars
+		//TODO FINALIZE CORRECT FILTER
+		//(listings with no reviews are not used and might have calendar 366 blocking mistakes ),
+		 },
+		{$lookup: { //JOIN rawlistings and calendars based on airbnb listing_id
+		    from: 'calendars',
+		    localField: 'listing.id',
+		    foreignField: 'listing_id',
+		    as: 'calendar'
+		}
+		},
+		{$unwind: '$calendar'},
+	];
 
-		if (listingCalendar) {
-		let demand = getFinalDemandScoreForListing(listing['listing']['star_rating'],
-				listing['listing']['reviews_count'], listingCalendar['occupancyScore'],
-			listing['pricing_quote']['nightly_price'],listing['listing']['primary_host']['is_superhost']
-			,1, 30);
-		};
-	};
+	try {
+        listingData = await RawListing.aggregate(pipeline).exec();
+    } catch (err) {
+        error('calculateDemand: error executing aggregate query', err); //TODO improve msg
+        //return ?
+    }
+    log(`read ${listingData.length} listing records for ${location}.`);
+
+
+    const minNightlyPrice = (_.minBy(listingData, o => o.pricing_quote.nightly_price)).pricing_quote.nightly_price;
+    const maxNightlyPrice = (_.maxBy(listingData, o => o.pricing_quote.nightly_price)).pricing_quote.nightly_price;
+    log(`Price stats for location ${location}: minimum nightly price = ${minNightlyPrice}, maximum nightly price = ${maxNightlyPrice}`);
+    
+    const demandArr = listingData.map(data => {
+    	const demand = getFinalDemandScoreForListing(
+    		data.listing.star_rating,
+    		data.listing.reviews_count,
+    		data.calendar.occupancyScore,
+    		data.pricing_quote.nightly_price,
+    		data.listing.primary_host.is_superhost,
+    		minNightlyPrice,
+    		maxNightlyPrice
+    		);
+    	return {
+    		listingId: data.listing.id,
+    		lat: data.listing.lat,
+    		lng: data.listing.lng,
+    		demand 
+    	}
+    });
+    console.log('demand array size: ' + demandArr.length);
+
+    const formattedLocationStr = _.chain(location).trim().deburr().startCase().replace('/[\. ]+/g','_');
+    const DemandModel = createDemandCollectionModel(formattedLocationStr); //e.g. "Demand.New_York", "Demand.Koln" 
+    try {
+    	await DemandModel.remove({}); //clear the collection if exists, so we have unique fresh results
+    	await DemandModel.collection.insert(demandArr);
+    }
+    catch (err) {
+    	error(`encountered error trying to populate the demand collection ${formattedLocationStr} for location ${location}!`, err);
+    	return false;
+    }
+    log(`Done saving demand for ${location} in ${formattedLocationStr} collection.`);
+    return true;
 }
 
 async function getCalendars(listingsArray, opts) {
-	let calendarsArray = [];
+	let calendarSaveCounter = 0;
 	for (let listing of listingsArray) {
 			let response;
 			opts.listingId = listing['listing']['id'];
 			let url = buildCalendarUrl(opts);
-			log(`getting calendar for listing_id ${opts.listingId}\n`, url);
-			console.log();
+			log(`getting calendar for listing_id ${opts.listingId}\n`, url + '\n');
 			try {
 				response = await airbnbRequest(url);
 			} catch (err) {
@@ -78,37 +117,19 @@ async function getCalendars(listingsArray, opts) {
                 else {return 1;}
             });
 			response['occupancyScore'] = occupancyScore;
-			calendarsArray.push(response);
+			try {
+				await Calendar.findOneAndUpdate({listing_id: opts.listingId}, response, {upsert: true}); //avoids creating duplicates
+				calendarSaveCounter++;
+			} catch (err) {
+				error(`getCalendars encountered error while saving calendar for listing_id ${opts.listindId} to database.`, err);
+			}
 		};
-	log(`total calendar data set size: ${calendarsArray.length}`);
-	return calendarsArray;	
+	log(`total calendar data set size: ${calendarSaveCounter}`);
+	return calendarSaveCounter;	
 }
 
-/*async function getCalendarsAsync(listingsArray, opts) {
-	let calendarsArray = await Promise.all(listingsArray.map(async listing => {
-			opts.listingId = listing['listing']['id'];
-			let url = buildCalendarUrl(opts);
-			log(`getting calendar for listing_id ${opts.listingId}\n`, url);
-			console.log();
-			let response = await airbnbRequest(url);
-			response['listing_id'] = listing['listing']['id']; // augment the calendar object with the listingId
-			 let occupancyScore = _.sumBy(response.calendar_days, o => { //consider reduce() instead
-                if (o.available)
-                 {
-                    return 0; //TODO CHECK LOGIC
-                }
-                else {return 1;}
-            });
-			response['occupancyScore'] = occupancyScore;
-			return response;
-	}));
-	log(`total calendar data set size: ${calendarsArray.length}`);
-	//console.dir(calendarsArray);
-	return calendarsArray;	
-}
-*/
 
-async function getListings(opts, limit, listingsArray) {
+async function getListings(opts, listingsArray, limit) {
     limit = limit || Number.MAX_SAFE_INTEGER;
     let resultsSize = 0;
 
@@ -201,6 +222,18 @@ function sleep(ms) {
     });
 }
 
+
+function createDemandCollectionModel(collectionName) {
+	const Demand = new mongoose.Schema({
+		listingId: {type: Number, index: true},
+		lat: Number,
+		lng: Number,
+		demand: Number
+	}, {strict: false}); 
+
+	return mongoose.model('Demand', Demand, 'Demand'+'.'+collectionName);
+}
+
 function buildCalendarUrl(opts, urlStr) {
     let url = urlStr || consts.CALENDAR_URL;
     url = url.replace('{$CLIENT_ID}', opts.clientId)
@@ -226,7 +259,7 @@ async function populateCalendars(location) {
 	 currentDate.setDate(currentDate.getDate() + 1);
 	
 	 // Airbnb allows accessing a listing's calender only up to 3 months ago:
-	 // (We added one day to be on the safe side and account for time zone offsets and daylight savings)
+	 // (We added one day extra to account for time zone offsets and daylight savings)
 	 let threeMonthsAgo = currentDate.setMonth(currentDate.getMonth() - 3); 
 	 let threeMonthsAgoDateObj = new Date(threeMonthsAgo);
 	 let threeMonthsAgoFormatted = dateFormat(threeMonthsAgo, "yyyy-m-d");	
@@ -239,18 +272,14 @@ async function populateCalendars(location) {
         endDate: threeMonthsAgoPlusYearFormatted
     }
     console.dir(opts);
-  	let listingsArr = await RawListing.find({'airbnb-demand-location': location}).limit(1000).lean(); 
+  	let listingsArr = await RawListing.find({'airbnb-demand-location': location}).lean(); 
      
 	log('dbg listingsArr size:', listingsArr.length);    
-	let calendarArr = await getCalendars(listingsArr, opts);
-    log(`now saving calendar for ${location} to database... size = ${calendarArr.length}`); //try catch
-    if (calendarArr.length > 0) { 
-   		 await Calendar.collection.insert(calendarArr); //TODO bulk upsert for duplicates...
-    }
-    //console.dir(listingsArr);
+	const calendarsSize = await getCalendars(listingsArr, opts);
+    log(`${calendarsSize} listing calendards for ${location} were saved to database.`);
 }
 
-async function populateListings(location, isToJSONOnly) { //TODO implement array to JSON
+async function populateListings(location, limit, isToJSONOnly) { //TODO implement array to JSON
 	let encodedLocation = location ? encodeURI(location) : consts.DEFAULT_LOCATION;
     let initialOpts = {
         clientId: consts.CLIENT_ID,
@@ -261,7 +290,7 @@ async function populateListings(location, isToJSONOnly) { //TODO implement array
         priceMax: 5
     }
     let listings = [];
-    await getListings(initialOpts, 500, listings);
+    await getListings(initialOpts, listings, limit);
     console.log('listings size:' + listings.length);
     log(`Now saving ${initialOpts.location} listings to database...`);
     try {
@@ -286,9 +315,12 @@ async function run() {
 try { 
 	
  log('------- New Run ' + new Date());
- //await populateListings('New York');
- //await populateCalendars('New York');
- await calculateDemand('New York');
+ error('----- New Run ' + new Date());
+
+ //await populateListings('Seattle');
+ //await populateCalendars('Seattle');
+ await calculateDemand('Seattle');
+ console.log('DONE!');
 }
 catch (err) {
 	console.log(err);
