@@ -10,7 +10,12 @@ import db from './util/db';
 import mongoose from 'mongoose';
 import RawListing from '../models/RawListing';
 import Calendar from '../models/Calendar';
+//import {createDemandCollectionModel} from '../models/genericDemand';
 import { getFinalDemandScoreForListing } from './util/metricsCalculator';
+
+//https://www.reddit.com/r/javascript/comments/55zuq6/should_i_use_a_template_engine_or_a_js_framework/
+//https://www.reddit.com/r/javascript/comments/670la3/when_to_use_a_templating_language_ejs_pug/
+
 
 //there is a corellation between listings which are "always reserved" ("yearly occupied" score of 365/366)
 //and such that have null star_ratings and 0 reviews. So we can weed them out by ignoring the null star
@@ -20,6 +25,15 @@ import { getFinalDemandScoreForListing } from './util/metricsCalculator';
 //TODO CHECK duplicates in calendar
 //TODO use collection upsert instead of insert
 //TODO replace let's with consts!
+//TODO add command line invoker for script
+//TODO choose sane limit consts to balance runtime 
+//TODO add mocha tests
+
+//style:
+//https://github.com/airbnb/javascript#destructuring
+//https://github.com/airbnb/javascript#functions 7.7
+
+//"was tested on chrome" (client side has async/await etc)
 
 //https://stackoverflow.com/questions/25285232/bulk-upsert-in-mongodb-using-mongoose
 
@@ -53,10 +67,10 @@ async function calculateDemand(location) {
         listingData = await RawListing.aggregate(pipeline).exec();
     } catch (err) {
         error('calculateDemand: error executing aggregate query', err); //TODO improve msg
-        //return ?
+        return false; //?
     }
     log(`read ${listingData.length} listing records for ${location}.`);
-
+    //TODO check length > 0 and throw error
 
     const minNightlyPrice = (_.minBy(listingData, o => o.pricing_quote.nightly_price)).pricing_quote.nightly_price;
     const maxNightlyPrice = (_.maxBy(listingData, o => o.pricing_quote.nightly_price)).pricing_quote.nightly_price;
@@ -81,11 +95,12 @@ async function calculateDemand(location) {
     });
     console.log('demand array size: ' + demandArr.length);
 
-    const formattedLocationStr = _.chain(location).trim().deburr().startCase().replace('/[\. ]+/g','_');
+    const formattedLocationStr = _.chain(location).trim().deburr().startCase().replace('/[\. ]+/g','_'); //CHECK
     const DemandModel = createDemandCollectionModel(formattedLocationStr); //e.g. "Demand.New_York", "Demand.Koln" 
     try {
-    	await DemandModel.remove({}); //clear the collection if exists, so we have unique fresh results
+    	await DemandModel.remove({}); //clear the collection if exists, so we have only fresh unique results
     	await DemandModel.collection.insert(demandArr);
+		await DemandModel.collection.insert({metadata: { createdAt: new Date() } });
     }
     catch (err) {
     	error(`encountered error trying to populate the demand collection ${formattedLocationStr} for location ${location}!`, err);
@@ -234,6 +249,7 @@ function createDemandCollectionModel(collectionName) {
 	return mongoose.model('Demand', Demand, 'Demand'+'.'+collectionName);
 }
 
+
 function buildCalendarUrl(opts, urlStr) {
     let url = urlStr || consts.CALENDAR_URL;
     url = url.replace('{$CLIENT_ID}', opts.clientId)
@@ -317,9 +333,12 @@ try {
  log('------- New Run ' + new Date());
  error('----- New Run ' + new Date());
 
- //await populateListings('Seattle');
- //await populateCalendars('Seattle');
- await calculateDemand('Seattle');
+ await populateListings('new york', 100);
+ await populateCalendars('new york');
+ await calculateDemand('new york');
+
+ //await calculateDemand('Seattle');
+
  console.log('DONE!');
 }
 catch (err) {

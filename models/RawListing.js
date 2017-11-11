@@ -7,7 +7,7 @@ let RawListing = new mongoose.Schema({
     'airbnb-demand-location': {type: String, index: true},
     listing: { 
         id: {type: Number, index: true },
-        star_rating: Number,
+        star_rating: {type: Number, index: true},
         reviews_count: Number,
         nightly_price: Number,
         primary_host: {

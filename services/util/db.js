@@ -9,7 +9,7 @@ mongoose.connect(mongodb.defaultDB.connection, {
     pass: mongodb.pass
 });
 
-db.on('error', err => console.error(`Failed to connect to database server ${mongodb.connection}. This code uses a mongo database; 
-it can be installed on localhost or remotely. See /config/*.config.js for db configuration.\n`, err));
+db.on('error', err => console.error(`Failed to connect to database server ${mongodb.connection}. 
+This code uses a mongo document store. It can be installed on localhost or remotely. See /config/*.config.js for db configuration.\n`, err));
 
     
