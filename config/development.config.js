@@ -1,5 +1,4 @@
 const LOCALHOST = '127.0.0.1';
-//TODO add production.config.js
 module.exports = {
     port: process.env.PORT || process.env.NODE_PORT || 8081,
     ssl: false,

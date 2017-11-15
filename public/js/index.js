@@ -13,7 +13,10 @@
         map = new google.maps.Map(document.getElementById('map'), {
           zoom: 10,
           center: center,
-          mapTypeId: 'satellite' //CHANGE
+          //mapTypeId: 'satellite', //CHANGE
+            mapTypeId: google.maps.MapTypeId.HYBRID,
+
+          labels: true
         });
         var infoWindow = new google.maps.InfoWindow;
         findCenter(locationStr);

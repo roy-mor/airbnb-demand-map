@@ -17,12 +17,41 @@ app.use(express.static(__dirname + '/public'));
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
 
+//MODIFY THIS EXAMPLE FUNCTION
+app.get('/demand/:collectionName', async function(request, response) {
+   
+
+     const  locationStr = 'New York'; 
+     
+      let weightedLocations = await mongoose.connection.db.collection('Demand.New York').find().toArray();
+  console.log('size of weightedLocations ' + weightedLocations.length);
+     const mapCenter = { lat: weightedLocations[3].lat, lng: weightedLocations[3].lng}; //TMP, CHANGE!
+
+  //sanitize and filter relevant data
+  weightedLocations = weightedLocations.reduce( (filteredRecords, record) => {
+    if (record.lat && record.lng && record.demand) { //filter
+      filteredRecords.push({lat: record.lat,  //map
+        lng: record.lng,
+        demand: record.demand});
+    }
+    return filteredRecords;
+  }, []);
+
+  //TODO BETTER to send relevant data only (JSON) rather than render entire page again...
+  response.render('pages/index', {
+    mapCenter,
+    weightedLocations,
+    locationStr,
+    demandCollections: await getDemandCollections()
+  });
+});
+//END EXAMPLE FUNCTION
+
 app.get('/', async function(request, response) {
 
   console.log(await getDemandCollections());
 
-  let weightedLocations = await mongoose.connection.db.collection('Demand.Seattle')
-  .find().toArray();
+  let weightedLocations = await mongoose.connection.db.collection('Demand.Seattle').find().toArray();
   console.log('size of weightedLocations ' + weightedLocations.length);
   //sanitize and filter relevant data
   weightedLocations = weightedLocations.reduce( (filteredRecords, record) => {
