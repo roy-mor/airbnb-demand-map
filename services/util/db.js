@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import {mongodb} from 'c0nfig';
-//todo import logger?
+mongoose.Promise = require('bluebird');
 
 let db = mongoose.connection;
 
@@ -9,7 +9,7 @@ mongoose.connect(mongodb.defaultDB.connection, {
     pass: mongodb.pass
 });
 
-db.on('error', err => console.error(`Failed to connect to database server ${mongodb.connection}. 
-This code uses a mongo document store. It can be installed on localhost or remotely. See /config/*.config.js for db configuration.\n`, err));
+db.on('error', err => console.error(`Failed to connect to database server ${mongodb.defaultDB.connection}. 
+This code uses a mongodb document store. It can be installed on localhost or remotely. See /config/*.config.js for db configuration.\n`, err));
 
     
