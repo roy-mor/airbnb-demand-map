@@ -18,7 +18,7 @@ const logger = winston.createLogger({
 
 // If we're not in production then also log to the `console` with the format:
 // `${info.level}: ${info.message} JSON.stringify({ ...rest }) `
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== 'production-nologs') { //TODO revert
     logger.add(new winston.transports.Console({
         format: winston.format.simple()
     }));
@@ -29,7 +29,7 @@ function logFactory(level) {
         if (typeof obj === 'string' || obj instanceof String || typeof obj === 'number') {
             return logger.log({
                 level,
-                message: `${msg} ${obj}`
+                message: `${msg} ${obj}` //TODO fix to show error
             });
         } else {
             return logger.log({
