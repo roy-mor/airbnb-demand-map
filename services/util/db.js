@@ -12,4 +12,5 @@ mongoose.connect(mongodb.defaultDB.connection, {
 db.on('error', err => console.error(`Failed to connect to database server ${mongodb.defaultDB.connection}. 
 This code uses a mongodb document store. It can be installed on localhost or remotely. See /config/*.config.js for db configuration.\n`, err));
 
-    
+db.on('connected', () => console.log(`Connected to ${mongodb.defaultDB.connection}.`));
+
