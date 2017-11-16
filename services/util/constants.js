@@ -12,7 +12,7 @@ const configurationConstants = {
 	DEFAULT_LOCATION: 'Jerusalem',
 	DEFAULT_LIMIT: 50,
 	MAXIMUM_MAX_PRICE: 1000, //a reasonable upper limit for stats purposes for nightly price in most cities
-	MAXIMUM_LISTINGS_SEARCH_LIMIT: 10000, //a reasonable cap that balances execution time and sample size for stats
+	MAXIMUM_LISTINGS_SEARCH_LIMIT: 15000, //a reasonable cap that balances execution time and sample size for stats
 	DEFAULT_PRICE_STEP: 1,
 	FULL_CALENDAR_DAYS: 366
 };
