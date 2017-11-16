@@ -1,3 +1,6 @@
+// This config file will be read when NODE_ENV environment variable equals 'production'.
+// Update data below to your own production environment.
+
 const LOCALHOST = '127.0.0.1';
 const MLAB_HOST = 'ds227035.mlab.com'
 module.exports = {
