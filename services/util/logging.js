@@ -28,14 +28,14 @@ function logFactory(level) {
     return function (msg, obj) {
         if (typeof obj === 'string' || obj instanceof String || typeof obj === 'number') {
             return logger.log({
-                level: level,
+                level,
                 message: `${msg} ${obj}`
             });
         } else {
             return logger.log({
-                level: level,
+                level,
                 message: msg,
-                value: obj
+                value: obj 
             });
         }
     }

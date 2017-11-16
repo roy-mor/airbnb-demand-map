@@ -24,11 +24,18 @@ function getStarRatingWeight(reviewsCount) {
 
 //TODO mocha test this
 //assumes uniform distribution of prices in the city
-function getFinalDemandScoreForListing({starRating, reviewsCount, occupancyScore, avgNightlyPrice, isSuperHost, 
-	minLocationPrice, maxLocationPrice}) {
+function getFinalDemandScoreForListing({
+	starRating,
+	reviewsCount,
+	occupancyScore,
+	avgNightlyPrice,
+	isSuperHost,
+	minLocationPrice,
+	maxLocationPrice
+}) {
 	const starRatingWeight = getStarRatingWeight(reviewsCount);
 	const restWeight = 1 - starRatingWeight; // all other parameters combined will have this weight
-	starRating = starRating || 0; 
+	starRating = starRating || 0;
 	const normalizedRating = normalize(0, 5)(starRating) * starRatingWeight;
 
 	const normalizedOccupancy = normalize(0, consts.FULL_CALENDAR_DAYS)(occupancyScore);
@@ -36,11 +43,11 @@ function getFinalDemandScoreForListing({starRating, reviewsCount, occupancyScore
 	//(because of the demand) (confusing cause and effect, but..) 
 	// two listing with the same occupancyScore, the more expensive one should get higher demand score
 	const normalizedPrice = normalize(minLocationPrice, maxLocationPrice)(avgNightlyPrice);
-	const normalizedIsSuperHost = isSuperHost ? 1 : 0; 
+	const normalizedIsSuperHost = isSuperHost ? 1 : 0;
 	const normalizedRestScore = (0.65 * normalizedOccupancy) + (0.25 * normalizedPrice) + (0.1 * normalizedIsSuperHost);
 	const finalScore = (restWeight * normalizedRestScore) + normalizedRating;
-	
-	if (finalScore > 1) console.log ('ERROR ITS MORE THAN 1!!!!!!!!!!!!!!!!!!1');
+
+	if (finalScore > 1) console.log('ERROR ITS MORE THAN 1!!!!!!!!!!!!!!!!!!1');
 	console.log(`starRating: ${starRating}, reviewsCount: ${reviewsCount}, occupancyScore: ${occupancyScore}`);
 	console.log(`avgPrice: ${avgNightlyPrice}, isSuperHost: ${isSuperHost}`);
 	console.log(`(0.65 * normalizedOccupancy (${normalizedOccupancy})) + (0.25 * normalizedPrice (${normalizedPrice})) + (0.1 * normalizedIsSuperHost (${normalizedIsSuperHost}))`);
@@ -49,24 +56,28 @@ function getFinalDemandScoreForListing({starRating, reviewsCount, occupancyScore
 	console.log(`normalizedRestScore: ${normalizedRestScore}, normalizedRating: ${normalizedRating}`)
 	console.log(`====> FINAL SCORE: ${finalScore}\n\n`);
 
-	return finalScore; 
+	return finalScore;
 }
 
 /* returns a function that re-scales values between 0 and 1*/
 function normalize(min, max) {
-    const delta = (max - min) === 0 ? 1 : max - min;
-    return function (val) {
-        return (val - min) / delta;
-    };
+	const delta = (max - min) === 0 ? 1 : max - min;
+	return function(val) {
+		return (val - min) / delta;
+	};
 }
 
-module.exports = {getFinalDemandScoreForListing};
+module.exports = {
+	getFinalDemandScoreForListing
+};
 
 //DEBUG FUNCTIONS:
 //TODO temp debug, delete this:
-console.log = function () {
-  logFile.write(util.format.apply(null, arguments) + '\n');
-  logStdout.write(util.format.apply(null, arguments) + '\n');
+console.log = function() {
+	logFile.write(util.format.apply(null, arguments) + '\n');
+	logStdout.write(util.format.apply(null, arguments) + '\n');
 };
-const logFile = fs.createWriteStream('./metrics.txt', { flags: 'w' }); //append to file
+const logFile = fs.createWriteStream('./metrics.txt', {
+	flags: 'w'
+}); //append to file
 const logStdout = process.stdout;

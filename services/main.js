@@ -1,40 +1,18 @@
-//import 'babel-polyfill';
 import _ from 'lodash';
 import fs from 'fs';
-import Promise from 'bluebird';
 import dateFormat from 'dateformat';
 import { log, warn, error } from './util/logging';
-import { httpRequest, sleep } from './util/http'; 
+import { httpRequest, sleep } from './util/http';
 import consts from './util/constants';
 import db from './util/db';
 import mongoose from 'mongoose';
 import RawListing from '../models/RawListing';
 import Calendar from '../models/Calendar';
-import { createDemandPipeline, buildSearchUrl, buildCalendarUrl } from './util/airbnbHelpers';
+import { buildSearchUrl, buildCalendarUrl } from './util/airbnbHelpers';
 import { getFinalDemandScoreForListing } from './util/metricsCalculator';
 
-//https://www.reddit.com/r/javascript/comments/55zuq6/should_i_use_a_template_engine_or_a_js_framework/
-//https://www.reddit.com/r/javascript/comments/670la3/when_to_use_a_templating_language_ejs_pug/
-
-//TODO: use linter plugin to detect unused imports
-
-//there is a corellation between listings which are "always reserved" ("yearly occupied" score of 365/366)
-//and such that have null star_ratings and 0 reviews. So we can weed them out by ignoring the null star
-//ratings ones (check to see if they have reasonable occupancy)
-
-//TODO CHECK AIRBNB JS STYLE GUIDE (AND OTHER STYLE GUIDES) let => consts
-//TODO CHECK duplicates in calendar
-//TODO replace let's with consts!
-//TODO add command line invoker for script
-//TODO add mocha tests
-
-//style:
-//https://github.com/airbnb/javascript#destructuring
-//https://github.com/airbnb/javascript#functions 7.7
-
-//"was tested on chrome" (client side has async/await etc)
-
-//usage: node getdemand <location> [--limit: limit] [--json]
+//TODO linter 
+//TODO logs and json in separate folders -- absoulate paths!
 
 
 /* Gets all calendars for this location between start and end date and save to calendars collection.*/ 
@@ -110,7 +88,7 @@ async function calculateDemand(location) {
         for (let record of listings) {
             const calendar = await Calendar.findOne({'listing_id': record.listing.id}).lean();
             // filter out all listings which are "always occupied" the entire year but have no star rating (inactive dummy listings)
-            if (calendar.occupancyScore !== consts.FULL_CALENDAR_DAYS || record.listing.star_rating !== null) {
+            if (calendar && (calendar.occupancyScore !== consts.FULL_CALENDAR_DAYS || record.listing.star_rating) !== null) {
                 joinedListingData.push(Object.assign({calendar}, record));
             }
         }
@@ -118,7 +96,6 @@ async function calculateDemand(location) {
         error('calculateDemand: encountered error while executing join', err);
         return null;
     }
-
     log(`read ${joinedListingData.length} listing records for ${location}.`);
     const minNightlyPrice = (_.minBy(joinedListingData, o => o.pricing_quote.nightly_price)).pricing_quote.nightly_price;
     const maxNightlyPrice = (_.maxBy(joinedListingData, o => o.pricing_quote.nightly_price)).pricing_quote.nightly_price;
@@ -152,7 +129,7 @@ async function calculateDemand(location) {
         error(`encountered error trying to populate the demand collection ${formattedLocationStr} for location ${location}!`, err);
         return null;
     }
-    log(`Done saving demand for ${location} in ${formattedLocationStr} collection.`);
+    log(`Done saving demand for ${location} in Demand.${formattedLocationStr} collection.`);
     return demandArr;
 }
 
@@ -280,7 +257,8 @@ async function run(location, limit = null) {
         mongoose.connection.close();
         log('DONE!');
     } catch (err) {
-        err(err);
+        console.log(err);
+        error(err);
     }
 }
 

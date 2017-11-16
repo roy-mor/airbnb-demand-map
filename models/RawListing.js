@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 let RawListing = new mongoose.Schema({
     pricing_quote: {
-        nightly_price: Number 
+        nightly_price: Number
     },
     'airbnb-demand-location': {
         type: String,
@@ -20,7 +20,7 @@ let RawListing = new mongoose.Schema({
         reviews_count: Number,
         nightly_price: Number,
         primary_host: {
-            is_superhost: Boolean,
+            is_superhost: Boolean
         }
     }
 }, {

@@ -21,7 +21,7 @@ function buildSearchUrl({clientId, location, offset, limit, priceMin, priceMax})
 }
 
 
-function createDemandPipeline(location) {
+/*function createDemandPipeline(location) {
     const pipeline = [{
             $match: {
                 'airbnb-demand-location': location,
@@ -50,5 +50,5 @@ function createDemandPipeline(location) {
     ];
     return pipeline;
 }
-
-module.exports = {createDemandPipeline, buildSearchUrl, buildCalendarUrl};
+*/
+module.exports = { buildSearchUrl, buildCalendarUrl };
