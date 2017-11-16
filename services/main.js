@@ -13,6 +13,8 @@ import { getFinalDemandScoreForListing } from './util/metricsCalculator';
 
 //TODO linter 
 //TODO logs and json in separate folders -- absoulate paths!
+//TODO logs should be saved to absoulte paths...
+//TODO package.json shrinkwrap
 
 
 /* Gets all calendars for this location between start and end date and save to calendars collection.*/ 
