@@ -64,8 +64,7 @@ async function populateListings(location, limit) {
     log(`Now saving ${location} listings to database...`);
     try {
         const listingsBulk = RawListing.collection.initializeUnorderedBulkOp();
-
-         listings.forEach(async page => {
+        listings.forEach(async page => {
             await Promise.all(page['search_results'].map(async record => {
                 record['airbnb-demand-location'] = location; // tag listing record with our own location metadata
                 await listingsBulk.find({'listing.id': record.listing.id}) // updates latest data and prevents duplicates 
@@ -73,16 +72,6 @@ async function populateListings(location, limit) {
                 .updateOne(record); 
             }));
         });
-/*
-
-        listings.forEach(async page => {
-            page['search_results'].forEach(async record => {
-                record['airbnb-demand-location'] = location; // tag listing record with our own location metadata
-                listingsBulk.find({'listing.id': record.listing.id}) // updates latest data and prevents duplicates 
-                .upsert()
-                .updateOne(record); 
-            });
-        });*/
         await listingsBulk.execute(); 
         log('Done saving listings to database.');
         await sleep(1000); 
@@ -181,12 +170,12 @@ async function getCalendars(listingsArray, opts) {
 }
 
 /* Queries airbnb API for all listings at location, up to optional limit and predefined maximum max price*/
-async function getListings(opts, listingsArray, limit = Number.MAX_SAFE_INTEGER) {
+async function getListings(opts, listingsArray, limit = consts.MAXIMUM_LISTINGS_SEARCH_LIMIT) {
     let resultsSize = 0;
     while (opts.priceMax <= consts.MAXIMUM_MAX_PRICE && resultsSize < limit) {
         opts.offset = 0; //reset pagination offset
         let url = buildSearchUrl(opts);
-        log(`DATASET SIZE: ${resultsSize}, NUM OF REQUESTS: ${listingsArray.length}  |  MIN PRICE = ${opts.priceMin}, MAX PRICE = ${opts.priceMax}, OFFSET = ${opts.offset}`);
+        log(`DATASET SIZE: ${resultsSize}, REQUESTS: ${listingsArray.length}  |  MIN PRICE = ${opts.priceMin}, MAX PRICE = ${opts.priceMax}, OFFSET = ${opts.offset}`);
         log(url);
         try {
             const response = await httpRequest(url);
@@ -220,7 +209,7 @@ async function doPaginate(url, opts, resultsSize, listingsArray) {
     opts.offset += opts.limit;
     url = buildSearchUrl(opts);
     log('Paginating....  ', url);
-    const response = await httpRequest(url);
+    const response = await httpRequest(url);    
     if (response && response.metadata) {
         log('pages:', response.metadata.pagination);
         listingsArray.push(response);
@@ -248,7 +237,7 @@ function createDemandCollectionModel(collectionName) {
 
 
 
-async function run(location, limit = null) {
+async function run(location, limit) {
     try {
         log('-------- (get-airbnb-demand): ------- New Run ' + new Date());
         await populateListings(location, limit);
