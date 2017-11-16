@@ -64,6 +64,17 @@ async function populateListings(location, limit) {
     log(`Now saving ${location} listings to database...`);
     try {
         const listingsBulk = RawListing.collection.initializeUnorderedBulkOp();
+
+         listings.forEach(async page => {
+            await Promise.all(page['search_results'].map(async record => {
+                record['airbnb-demand-location'] = location; // tag listing record with our own location metadata
+                await listingsBulk.find({'listing.id': record.listing.id}) // updates latest data and prevents duplicates 
+                .upsert()
+                .updateOne(record); 
+            }));
+        });
+/*
+
         listings.forEach(async page => {
             page['search_results'].forEach(async record => {
                 record['airbnb-demand-location'] = location; // tag listing record with our own location metadata
@@ -71,7 +82,7 @@ async function populateListings(location, limit) {
                 .upsert()
                 .updateOne(record); 
             });
-        });
+        });*/
         await listingsBulk.execute(); 
         log('Done saving listings to database.');
         await sleep(1000); 
