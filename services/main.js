@@ -201,7 +201,7 @@ async function calculateDemand(location) {
             }
             progressCounter++;
             if (progressCounter % 100 === 0 ) {
-                log(`Processed entry ${progresCounter} out of ${listings.length}...`);
+                log(`Processed entry ${progressCounter} out of ${listings.length}...`);
             }
         }
     } catch (err) {
