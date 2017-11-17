@@ -86,64 +86,55 @@ async function populateListings(location, limit) {
 /* Calculates demand based on listings and calendar aggregate, and save to Demand.location collection. */
 async function calculateDemand(location) {
     log(`Calculating demand for location ${location}...`);
-    let joinedListingData = [];
-    let progressCounter = 0;
-    try { // (consider joining with aggregate framework query here instead...)
-        log (`Reading rawlistings for ${location} from db...`);
-        const listings = await RawListing.find({'airbnb-demand-location': location}).lean();
-        log (`Read ${listings.length} listings. Now joining calendars and listings to determine demand....`);
-        for (let record of listings) {
-            const calendar = await Calendar.findOne({'listing_id': record.listing.id}).lean();
-            // filter out all listings which are "always occupied" the entire year but have no star rating (inactive dummy listings)
-            if (calendar && (calendar.occupancyScore !== consts.FULL_CALENDAR_DAYS || record.listing.star_rating) !== null) {
-                joinedListingData.push(Object.assign({calendar}, record));
-            }
-            progressCounter++;
-            if (progressCounter % 100 === 0 ) {
-                log(`Processed entry ${progressCounter} out of ${listings.length}...`);
-            }
-        }
-    } catch (err) {
-        error('calculateDemand: encountered error while executing join', err);
-        return null;
-    }
-    log(`read ${joinedListingData.length} listing records for ${location}.`);
-    const minNightlyPrice = (_.minBy(joinedListingData, o => o.pricing_quote.nightly_price)).pricing_quote.nightly_price;
-    const maxNightlyPrice = (_.maxBy(joinedListingData, o => o.pricing_quote.nightly_price)).pricing_quote.nightly_price;
-    log(`Price stats for location ${location}: minimum nightly price = ${minNightlyPrice}, maximum nightly price = ${maxNightlyPrice}`);
-
-    const demandArr = joinedListingData.map(data => {
-        const demand = getFinalDemandScoreForListing({
-            starRating: data.listing.star_rating,
-            reviewsCount: data.listing.reviews_count,
-            occupancyScore: data.calendar.occupancyScore,
-            avgNightlyPrice: data.pricing_quote.nightly_price,
-            isSuperHost: data.listing.primary_host.is_superhost,
-            minLocationPrice: minNightlyPrice,
-            maxLocationPrice: maxNightlyPrice
-        });
-        return {
-            listingId: data.listing.id,
-            lat: data.listing.lat,
-            lng: data.listing.lng,
-            demand
-        }
-    });
-
     const formattedLocationStr = _.chain(location).trim().deburr().startCase();
     const DemandModel = createDemandCollectionModel(formattedLocationStr); //e.g. "Demand.New_York", "Demand.Koln" 
     try {
         await DemandModel.remove({}); //clear the collection if exists, so we have only fresh unique results
-        await DemandModel.collection.insert(demandArr);
-        await DemandModel.collection.insert({metadata: {createdAt: new Date()} });
+        await DemandModel.collection.insert({metadata: { createdAt: new Date() }});
+        let progressCounter = 0;
+
+        // (consider joining with aggregate framework query here instead...)
+        log(`Reading rawlistings for ${location} from db...`);
+        const listings = await RawListing.find({'airbnb-demand-location': location}).lean();
+        log(`Read ${listings.length} listings. Now joining calendars and listings to determine demand....`);
+        const minNightlyPrice = (_.minBy(listings, o => o.pricing_quote.nightly_price)).pricing_quote.nightly_price;
+        const maxNightlyPrice = (_.maxBy(listings, o => o.pricing_quote.nightly_price)).pricing_quote.nightly_price;
+        log(`Price stats for location ${location}: minimum nightly price = ${minNightlyPrice}, maximum nightly price = ${maxNightlyPrice}`);
+
+        for (let record of listings) {
+            const calendar = await Calendar.findOne({'listing_id': record.listing.id}).lean();
+            // filter out all listings which are "always occupied" the entire year but have no star rating (inactive dummy listings)
+            if (calendar && (calendar.occupancyScore !== consts.FULL_CALENDAR_DAYS || record.listing.star_rating) !== null) {
+                const data = Object.assign({calendar}, record);
+                const demand = getFinalDemandScoreForListing({
+                    starRating: data.listing.star_rating,
+                    reviewsCount: data.listing.reviews_count,
+                    occupancyScore: data.calendar.occupancyScore,
+                    avgNightlyPrice: data.pricing_quote.nightly_price,
+                    isSuperHost: data.listing.primary_host.is_superhost,
+                    minLocationPrice: minNightlyPrice,
+                    maxLocationPrice: maxNightlyPrice
+                });
+
+                await DemandModel.collection.insert({ //TODO consider bulk insert
+                    listingId: data.listing.id,
+                    lat: data.listing.lat,
+                    lng: data.listing.lng,
+                    demand
+                });
+            }
+
+            progressCounter++;
+            if (progressCounter % 100 === 0) {
+                log(`Processed entry ${progressCounter} out of ${listings.length}...`);
+            }
+        }
     } catch (err) {
-        error(`encountered error trying to populate the demand collection ${formattedLocationStr} for location ${location}!`, err);
+        error('calculateDemand: encountered error while calculating demand', err);
         return null;
     }
-    log(`Done saving demand for ${location} in Demand.${formattedLocationStr} collection.`);
-    return demandArr;
+    return DemandModel.find().lean();
 }
-
 
 
 /* Iterate over listings and for each one get the calendar. Save to calendars collection. */
@@ -262,7 +253,7 @@ async function run(location, limit) {
         demandArr = await calculateDemand(location);
         
     }
-    
+
         if (demandArr) {
             const jsonFilename = 'Demand.' + _.chain(location).trim().startCase() + '.json';
             log(`Writing demand to JSON file ${jsonFilename}...`);
