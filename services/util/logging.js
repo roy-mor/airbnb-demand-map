@@ -34,7 +34,7 @@ function logFactory(level) {
         } else {
             return logger.log({
                 level,
-                message: msg,
+                message: obj ? `${msg}: ${util.inspect(obj)}` : msg, 
                 value: obj 
             });
         }
