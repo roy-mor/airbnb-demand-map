@@ -47,7 +47,7 @@ function getFinalDemandScoreForListing({
 	const normalizedRestScore = (0.65 * normalizedOccupancy) + (0.25 * normalizedPrice) + (0.1 * normalizedIsSuperHost);
 	const finalScore = (restWeight * normalizedRestScore) + normalizedRating;
 
-	if (finalScore > 1) console.log('ERROR ITS MORE THAN 1!!!!!!!!!!!!!!!!!!1');
+	/*if (finalScore > 1) console.log('ERROR ITS MORE THAN 1!!!!!!!!!!!!!!!!!!1');
 	console.log(`starRating: ${starRating}, reviewsCount: ${reviewsCount}, occupancyScore: ${occupancyScore}`);
 	console.log(`avgPrice: ${avgNightlyPrice}, isSuperHost: ${isSuperHost}`);
 	console.log(`(0.65 * normalizedOccupancy (${normalizedOccupancy})) + (0.25 * normalizedPrice (${normalizedPrice})) + (0.1 * normalizedIsSuperHost (${normalizedIsSuperHost}))`);
@@ -55,7 +55,7 @@ function getFinalDemandScoreForListing({
 	console.log(`-----`);
 	console.log(`normalizedRestScore: ${normalizedRestScore}, normalizedRating: ${normalizedRating}`)
 	console.log(`====> FINAL SCORE: ${finalScore}\n\n`);
-
+	*/
 	return finalScore;
 }
 
