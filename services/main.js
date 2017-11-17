@@ -29,7 +29,6 @@ async function populateCalendars(location) {
     const threeMonthsAgoDateObj = new Date(threeMonthsAgo);
     const threeMonthsAgoFormatted = dateFormat(threeMonthsAgo, "yyyy-m-d");
     const threeMonthsAgoPlusYearFormatted = dateFormat(threeMonthsAgoDateObj.setFullYear(threeMonthsAgoDateObj.getFullYear() + 1), "yyyy-m-d");
-    //TODO DELETE const threeMonthsAgoPlusYearFormatted = dateFormat(threeMonthsAgoDateObj.setMonth(threeMonthsAgoDateObj.getMonth() + 6), "yyyy-m-d");
 
     const opts = {
         clientId: consts.CLIENT_ID,
@@ -42,8 +41,6 @@ async function populateCalendars(location) {
         log(`${calendarsSize} listing calendards for ${location} were saved to database.`);
     }
     catch (err) {
-                console.log(err);
-
         error('encountered error populating calendars', err);
     }
 }
@@ -93,9 +90,8 @@ async function calculateDemand(location) {
         await DemandModel.collection.insert({metadata: { createdAt: new Date() }});
         let progressCounter = 0;
 
-        // (consider joining with aggregate framework query here instead...)
         log(`Reading rawlistings for ${location} from db...`);
-        const listings = await RawListing.find({'airbnb-demand-location': location}).lean();
+        const listings = await RawListing.find({'airbnb-demand-location': location}).lean(); //consider join with aggregate framework instead...
         log(`Read ${listings.length} listings. Now joining calendars and listings to determine demand....`);
         const minNightlyPrice = (_.minBy(listings, o => o.pricing_quote.nightly_price)).pricing_quote.nightly_price;
         const maxNightlyPrice = (_.maxBy(listings, o => o.pricing_quote.nightly_price)).pricing_quote.nightly_price;
@@ -116,7 +112,7 @@ async function calculateDemand(location) {
                     maxLocationPrice: maxNightlyPrice
                 });
 
-                await DemandModel.collection.insert({ //TODO consider bulk insert
+                await DemandModel.collection.insert({ 
                     listingId: data.listing.id,
                     lat: data.listing.lat,
                     lng: data.listing.lng,
@@ -134,10 +130,6 @@ async function calculateDemand(location) {
         return null;
     }
     return DemandModel.find({}).lean();
-    /*console.log ('results length = ' results.length);
-    console.log(results[0]);
-    console.log(results[1]);
-    return results;*/
 }
 
 
@@ -245,18 +237,9 @@ function createDemandCollectionModel(collectionName) {
 async function run(location, limit) {
     try {
         log('-------- (get-airbnb-demand): ------- New Run ' + new Date());
-                let demandArr; 
-                console.log(limit);
-        if (limit == 666 ) {
-            limit = undefined;
-             demandArr =  await calculateDemand(location);
-        } else 
-        {
         await populateListings(location, limit); 
         await populateCalendars(location);
-        demandArr = await calculateDemand(location);
-        
-    }
+        const demandArr = await calculateDemand(location);
 
         if (demandArr) {
             const jsonFilename = 'Demand.' + _.chain(location).trim().startCase() + '.json';
@@ -273,7 +256,6 @@ async function run(location, limit) {
         mongoose.connection.close();
         log('DONE!');
     } catch (err) {
-        console.log(err);
         error(err);
     }
 }
