@@ -133,7 +133,11 @@ async function calculateDemand(location) {
         error('calculateDemand: encountered error while calculating demand', err);
         return null;
     }
-    return DemandModel.find().lean();
+    return DemandModel.find({}).lean();
+    /*console.log ('results length = ' results.length);
+    console.log(results[0]);
+    console.log(results[1]);
+    return results;*/
 }
 
 
@@ -245,7 +249,7 @@ async function run(location, limit) {
                 console.log(limit);
         if (limit == 666 ) {
             limit = undefined;
-            const demandArr =  await calculateDemand(location);
+             demandArr =  await calculateDemand(location);
         } else 
         {
         await populateListings(location, limit); 
