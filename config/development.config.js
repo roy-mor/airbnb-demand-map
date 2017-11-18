@@ -14,7 +14,6 @@ module.exports = {
             pass: '$(mongodb.pass)',
             name: 'airbnb-demand',
             connection: process.env.UD_MONGODB_CONNECTION || 'mongodb://$(mongodb.host):$(mongodb.port)/$(mongodb.defaultDB.name)'
-       }
-   }
+        }
+    }
 };
-
