@@ -7,6 +7,7 @@ npm-debug.log
 *.dev
 .DS_Store
 *.log
+logs/
 
 # Docker
 Dockerfile
@@ -14,3 +15,6 @@ docker-compose.yml
 
 # Result data files 
 Demand.*.json
+
+
+
