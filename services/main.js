@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import fs from 'fs';
+import path from 'path';
 import dateFormat from 'dateformat';
 import { log, warn, error } from './util/logging';
 import { httpRequest, sleep } from './util/http';
@@ -92,10 +93,10 @@ async function calculateDemand(location) {
 
         log(`Reading rawlistings for ${location} from db...`);
         const listings = await RawListing.find({'airbnb-demand-location': location}).lean(); //consider join with aggregate framework instead...
-        log(`Read ${listings.length} listings. Now joining calendars and listings to determine demand....`);
         const minNightlyPrice = (_.minBy(listings, o => o.pricing_quote.nightly_price)).pricing_quote.nightly_price;
         const maxNightlyPrice = (_.maxBy(listings, o => o.pricing_quote.nightly_price)).pricing_quote.nightly_price;
         log(`Price stats for location ${location}: minimum nightly price = ${minNightlyPrice}, maximum nightly price = ${maxNightlyPrice}`);
+        log(`Read ${listings.length} listings. Now joining calendars and listings to determine demand....`);
 
         for (let record of listings) {
             const calendar = await Calendar.findOne({'listing_id': record.listing.id}).lean();
@@ -125,11 +126,11 @@ async function calculateDemand(location) {
                 log(`Processed entry ${progressCounter} out of ${listings.length}...`);
             }
         }
+        return await DemandModel.find({}).lean();
     } catch (err) {
         error('calculateDemand: encountered error while calculating demand', err);
         return null;
     }
-    return DemandModel.find({}).lean();
 }
 
 
@@ -243,10 +244,10 @@ async function run(location, limit) {
 
         if (demandArr) {
             const jsonFilename = 'Demand.' + _.chain(location).trim().startCase() + '.json';
-            log(`Writing demand to JSON file ${jsonFilename}...`);
+            log(`Writing demand to JSON file json/${jsonFilename}...`);
             try {
-                fs.writeFile(jsonFilename, JSON.stringify(demandArr.map(r => {
-                    delete r['_id'];
+                fs.writeFileSync(path.join(__dirname ,'json', jsonFilename), JSON.stringify(demandArr.map(r => {
+                    delete r['_id'];                    
                     return r;
                 })), 'utf-8');
             } catch (err) {
@@ -256,7 +257,7 @@ async function run(location, limit) {
         mongoose.connection.close();
         log('DONE!');
     } catch (err) {
-        error(err);
+        error('Error', err);
     }
 }
 
