@@ -19,4 +19,6 @@ module.exports = {
             connection: process.env.UD_MONGODB_CONNECTION || 'mongodb://$(mongodb.host):$(mongodb.port)/$(mongodb.defaultDB.name)'
         }
     }
+};
+
 
