@@ -1,17 +1,21 @@
 import winston from 'winston';
 import format from 'util';
 import util from 'util';
+import path from 'path';
+import fs from 'fs';
+
+const logPath = path.join(__dirname, '../logs/');
 
 const logger = winston.createLogger({
     level: 'info',
     format: winston.format.simple(),
     transports: [
         new winston.transports.File({
-            filename: 'error.log',
+            filename: logPath + 'error.log',
             level: 'error'
         }),
         new winston.transports.File({
-            filename: 'airbnbdemand-script.log'
+            filename: logPath + 'airbnb-demand-script.log'
         })
     ]
 });
@@ -29,12 +33,12 @@ function logFactory(level) {
         if (typeof obj === 'string' || obj instanceof String || typeof obj === 'number') {
             return logger.log({
                 level,
-                message: `${msg} ${obj}` //TODO fix to show error
+                message: `${msg} ${obj}` 
             });
         } else {
             return logger.log({
                 level,
-                message: obj ? `${msg}: ${util.inspect(obj)}` : msg, 
+                message: obj ? `${msg} ${util.inspect(obj)}` : msg, 
                 value: obj 
             });
         }
@@ -44,6 +48,13 @@ function logFactory(level) {
 let log = logFactory('info');
 let error = logFactory('error');
 let warn = logFactory('warn');
+
+try {
+    if (!fs.existsSync(logPath)) fs.mkdirSync(logPath);
+}
+catch (err) {
+    console.log('logger error: could not create log directory.');
+}
 
 module.exports = {
     logger,
