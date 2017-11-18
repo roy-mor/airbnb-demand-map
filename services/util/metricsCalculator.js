@@ -1,4 +1,3 @@
-import fs from 'fs'; // TODO REMOVE
 import util from 'util';
 import consts from './constants';
 /* The weight of star rating in the final demand metric for a listing is dependent upon the number of reviews 
@@ -70,14 +69,3 @@ function normalize(min, max) {
 module.exports = {
 	getFinalDemandScoreForListing
 };
-
-//DEBUG FUNCTIONS:
-//TODO temp debug, delete this:
-console.log = function() {
-	logFile.write(util.format.apply(null, arguments) + '\n');
-	logStdout.write(util.format.apply(null, arguments) + '\n');
-};
-const logFile = fs.createWriteStream('./metrics.txt', {
-	flags: 'w'
-}); //append to file
-const logStdout = process.stdout;
