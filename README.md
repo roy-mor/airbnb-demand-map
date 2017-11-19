@@ -58,25 +58,23 @@ if a `Demand.Dublin` collection exists in the database.
 Please see design document.
 
 ### Files and folders
-``
-./index.js                          Entry point for Express web app
--- ./config/                        Configuration files (database credentials etc)
--- ./models/                        Models for database
--- ./public/                        Static www folder
--- ./scripts/                     
--- ./scripts/get-airbnb-demand.js   Entry point for data ingestion script
--- ./scripts/main.js                Main logic for data ingestion script
-   		-- ./scripts/util/          Metrics calculator, consts, http, logging, db, etc
-  		-- ./scripts/logs/          This is where data ingestion script logs are kept
-  		-- ./scripts/json/          This is where resulting json files are kept
--- ./tests/		  					Unit tests
--- ./views/                         EJS files for Express
-``
 
-
-``
----> logs - wher elogs are kept, where json files are kept etc
-
+./index.js   ___                       Entry point for Express web app   
+-- ./config/ ___                       Configuration files (database credentials etc)   
+-- ./models/ ___                       Models for database   
+-- ./public/ ___                       Static www folder   
+-- ./scripts/                         
+-- ./scripts/get-airbnb-demand.js ___   Entry point for data ingestion script   
+-- ./scripts/main.js ___               Main logic for data ingestion script   
+   		-- ./scripts/util/ ___        Metrics calculator, consts, http, logging, db, etc   
+  		-- ./scripts/logs/ ___            This is where data ingestion script logs are kept   
+  		-- ./scripts/json/ ___            This is where resulting json files are kept    
+-- ./tests/ ___		  					      Unit tests   
+-- ./views/ ___                        EJS files for Express   
+  
+    
+    
+  
 ### Environment
 
 * Node.js v6.6.0
