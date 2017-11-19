@@ -48,7 +48,7 @@ Run the scripts additional times with different locations to create demand data 
 
 Then go to http://localhost:5000/ where a random city out of the available cities will be displayed. 
 In the browser, click "Another Random City" to display the map of another location, if available. 
-For a specific city, go to http://localhost:5000/demand/<location>, e.g, `http://localhost:5000/demand/Dublin`, 
+For a specific city, go to http://localhost:5000/demand/\<location\>, e.g, `http://localhost:5000/demand/Dublin`, 
 if a `Demand.Dublin` collection exists in the database.
 
 
