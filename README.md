@@ -21,9 +21,9 @@ In production (`NODE_ENV='production'`), edit config/production.config.js.
 
 ### Running 
 
-First the migration script has to be executed to populate the database with demand data for at least one location. A JSON file will also be generated at the and of the run, in scripts/json folder (not used by the app).
+First the ingestion script has to be executed to populate the database with demand data for at least one location. A JSON file will also be generated at the and of the run, in scripts/json folder (not used by the app).
 
-### Executing migration script:
+### Executing ingestion script:
 ```
 cd scripts
 node get-airbnb-demand <location> [optional limit]
