@@ -70,7 +70,7 @@ async function populateListings(location, limit) {
         log('Done saving listings to database.');
         await sleep(1000); 
     } catch (err) {
-        error('encountered error while saving listings to database: ', err)
+        error('encountered error while saving listings to database: ', err);
     }
 }
 

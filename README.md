@@ -48,12 +48,34 @@ Run the script additional times with different locations to create demand data f
 
 Then go to http://localhost:5000/ where a random city out of the available cities will be displayed. 
 In the browser, click "Another Random City" to display the map of another location, if available. 
+
 For a specific city, go to http://localhost:5000/demand/<location\>, e.g, `http://localhost:5000/demand/Dublin`, 
 if a `Demand.Dublin` collection exists in the database.
 
 
 
-### Demand metric and other data ...
+### Demand metric logic
+Please see design document.
+
+### Files and folders
+``
+./index.js                          Entry point for Express web app
+-- ./config/                        Configuration files (database credentials etc)
+-- ./models/                        Models for database
+-- ./public/                        Static www folder
+-- ./scripts/                     
+-- ./scripts/get-airbnb-demand.js   Entry point for data ingestion script
+-- ./scripts/main.js                Main logic for data ingestion script
+   		-- ./scripts/util/          Metrics calculator, consts, http, logging, db, etc
+  		-- ./scripts/logs/          This is where data ingestion script logs are kept
+  		-- ./scripts/json/          This is where resulting json files are kept
+-- ./tests/		  					Unit tests
+-- ./views/                         EJS files for Express
+``
+
+
+``
+---> logs - wher elogs are kept, where json files are kept etc
 
 ### Environment
 
