@@ -37,9 +37,9 @@ node get-airbnb-demand `New York` 4000
 
 At the end of `get-airbnb-demand` script execution, the database `airbnb-demand` will be populated with a collection `Demand.<location>` (e.g., 'Demand.London') with the demand data for all listings found at the location. 
 
-In addition, collections `rawlistings` and `calendars` will be populated with the listings and calendar data in that location. 
+In addition, collections `rawlistings` and `calendars` will be added the listings and calendar data from that location. 
 
-Run the scripts additional times with different locations to create demand data for more cities, which the app will then display.
+Run the script additional times with different locations to create demand data for more cities, which the app will then display.
 
 
 ### Running the web application locally
@@ -48,7 +48,7 @@ Run the scripts additional times with different locations to create demand data 
 
 Then go to http://localhost:5000/ where a random city out of the available cities will be displayed. 
 In the browser, click "Another Random City" to display the map of another location, if available. 
-For a specific city, go to http://localhost:5000/demand/\<location\>, e.g, `http://localhost:5000/demand/Dublin`, 
+For a specific city, go to http://localhost:5000/demand/<location\>, e.g, `http://localhost:5000/demand/Dublin`, 
 if a `Demand.Dublin` collection exists in the database.
 
 
