@@ -1,7 +1,7 @@
 // This config file will be read when NODE_ENV environment variable equals 'production'.
 // Update data below to your own production environment.
 
-const MLAB_HOST = 'ds227035.mlab.com';
+const MLAB_HOST = 'YOUR_MONGO_HOST_ADDRESS_HERE.COM';
 module.exports = {
     port: process.env.PORT || process.env.NODE_PORT || 8081,
     ssl: false,
